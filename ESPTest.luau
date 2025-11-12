@@ -3742,173 +3742,419 @@ getgenv().MultyLibraryLoaded = true
     --
 -- 
 
+-- Initialize Twilight ESP
+getgenv().NoAnticheatPresent = true -- Set to true if no anticheat (enables chams)
+getgenv().InterfaceName = "Multy ESP Suite"
+
+local success, Twilight = pcall(function()
+    return loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/twilight"))()
+end)
+
+if not success or not Twilight then
+    warn("Failed to load Twilight ESP library. Error:", Twilight)
+    return
+end
+
+Twilight.Load()
+
+-- Default accent color
 local defaultAccent = themes.preset.accent
 
+-- Create Main Window
 local window = MultyLibrary:window({
     name = "Multy",
-    suffix = "Library",
-    gameInfo = "Multy Lib. • Demo"
+    suffix = "ESP",
+    gameInfo = "ESP Suite • Powered by Twilight"
 })
 
-window:seperator({name = "Dashboard"})
+window:seperator({name = "ESP Features"})
 
-local overviewPage, appearancePage, advancedPage = window:tab({name = "Example", tabs = {"Overview", "Appearance", "Advanced"}})
+-- Create Tabs
+local visualsPage, colorsPage, settingsPage = window:tab({name = "Player ESP", tabs = {"Visuals", "Colors", "Settings"}})
 
--- Overview
-local overviewColumn = overviewPage:column({})
-local sessionSection = overviewColumn:section({name = "Session Controls", default = true})
+-- ========================================
+-- VISUALS TAB
+-- ========================================
+local visualsColumn = visualsPage:column({})
+local boxesSection = visualsColumn:section({name = "Box ESP", size = 0.5, default = true, icon = "rbxassetid://6022668898"})
 
-sessionSection:label({
-    name = "Welcome to Multy Library",
-    info = "Use these controls to explore the widgets bundled with the library."
-})
-
-sessionSection:toggle({
-    name = "Enable HUD",
+boxesSection:toggle({
+    name = "Corner Boxes",
     seperator = true,
-    flag = "demo_enable_hud",
+    flag = "esp_corner_boxes",
+    default = true,
     callback = function(enabled)
-        print("[Multy Library] HUD:", enabled and "enabled" or "disabled")
+        Twilight.settings.boxEnabled = enabled
     end
 })
 
-sessionSection:slider({
-    name = "Objective Radius",
-    min = 0,
-    max = 500,
-    default = 150,
-    suffix = " studs",
+boxesSection:toggle({
+    name = "Box Team Check",
     seperator = true,
-    flag = "demo_objective_radius",
-    callback = function(distance)
-        print("[Multy Library] Objective radius:", distance)
+    flag = "esp_box_team_check",
+    default = false,
+    callback = function(enabled)
+        Twilight.settings.boxTeamCheck = enabled
     end
 })
 
-sessionSection:dropdown({
-    name = "Target Filter",
-    items = {"All Players", "Teammates Only", "Opponents Only"},
-    default = "All Players",
+boxesSection:toggle({
+    name = "Outline Boxes",
     seperator = true,
-    flag = "demo_target_filter",
-    callback = function(selection)
-        print("[Multy Library] Target filter:", selection)
+    flag = "esp_outline_boxes",
+    default = true,
+    callback = function(enabled)
+        Twilight.settings.outlineBoxEnabled = enabled
     end
 })
 
-sessionSection:textbox({
-    name = "Profile Tag",
-    default = "Analyst",
+boxesSection:toggle({
+    name = "Outline Team Check",
     seperator = true,
-    flag = "demo_profile_tag",
-    callback = function(text)
-        print("[Multy Library] Profile tag:", text)
+    flag = "esp_outline_team_check",
+    default = false,
+    callback = function(enabled)
+        Twilight.settings.outlineBoxTeamCheck = enabled
     end
 })
 
-sessionSection:button({
-    name = "Send Demo Notification",
-    callback = function()
-        notifications:create_notification({
-            name = "Multy Library",
-            info = "This sample notification showcases the built-in toast system.",
-            lifetime = 4
+local tracersSection = visualsColumn:section({name = "Tracers & Lines", size = 0.5, default = true, icon = "rbxassetid://6034287594"})
+
+tracersSection:toggle({
+    name = "Tracers",
+    seperator = true,
+    flag = "esp_tracers",
+    default = false,
+    callback = function(enabled)
+        Twilight.settings.tracersEnabled = enabled
+    end
+})
+
+local healthSection = visualsColumn:section({name = "Health & Info", size = 0.5, default = true, icon = "rbxassetid://6031763426"})
+
+healthSection:toggle({
+    name = "Health Bars",
+    seperator = true,
+    flag = "esp_health_bars",
+    default = true,
+    callback = function(enabled)
+        Twilight.settings.healthBarEnabled = enabled
+    end
+})
+
+healthSection:toggle({
+    name = "Health Bar Team Check",
+    seperator = true,
+    flag = "esp_health_team_check",
+    default = false,
+    callback = function(enabled)
+        Twilight.settings.healthBarTeamCheck = enabled
+    end
+})
+
+healthSection:toggle({
+    name = "Low Health Alert",
+    seperator = true,
+    flag = "esp_low_health_alert",
+    default = true,
+    callback = function(enabled)
+        Twilight.settings.lowHealthAlert = enabled
+    end
+})
+
+healthSection:toggle({
+    name = "Show Name Tags",
+    seperator = true,
+    flag = "esp_show_names",
+    default = true,
+    callback = function(enabled)
+        Twilight.settings.showObjectNames = enabled
+    end
+})
+
+local chamSection = visualsColumn:section({name = "Chams (DETECTED)", size = 0.5, default = true, icon = "rbxassetid://6031229361", fading = true})
+
+chamSection:label({
+    name = "⚠️ WARNING",
+    info = "Chams are highly detectable! Only enable if game has no anticheat."
+})
+
+chamSection:toggle({
+    name = "Enable Chams",
+    seperator = true,
+    flag = "esp_chams",
+    default = false,
+    callback = function(enabled)
+        if getgenv().NoAnticheatPresent then
+            Twilight.settings.chamsEnabled = enabled
+        else
+            notifications:create_notification({
+                name = "Chams Disabled",
+                info = "Set NoAnticheatPresent to true to enable chams.",
+                lifetime = 3
+            })
+        end
+    end
+})
+
+chamSection:toggle({
+    name = "Chams Team Check",
+    seperator = true,
+    flag = "esp_chams_team_check",
+    default = false,
+    callback = function(enabled)
+        Twilight.settings.chamsTeamCheck = enabled
+    end
+})
+
+-- ========================================
+-- COLORS TAB
+-- ========================================
+local colorsColumn = colorsPage:column({})
+local neutralColorsSection = colorsColumn:section({name = "Neutral Colors", size = 0.5, default = true, icon = "rbxassetid://6031229361"})
+
+neutralColorsSection:colorpicker({
+    name = "Corner Box Color",
+    flag = "esp_box_neutral_color",
+    color = rgb(255, 255, 255),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                boxNeutral = color
+            }
         })
     end
 })
 
-sessionSection:keybind({
-    name = "Toggle Menu",
-    flag = "demo_menu_bind",
-    callback = function(is_open)
-        window.toggle_menu(is_open)
-    end,
-    default = true
+neutralColorsSection:colorpicker({
+    name = "Outline Box Color",
+    flag = "esp_outline_neutral_color",
+    color = rgb(255, 255, 255),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                boxOutlineNeutral = color
+            }
+        })
+    end
 })
 
--- Appearance
-local appearanceColumn = appearancePage:column({})
-local themeSection = appearanceColumn:section({name = "Theme Customization", default = true})
+neutralColorsSection:colorpicker({
+    name = "Tracer Color",
+    flag = "esp_tracer_neutral_color",
+    color = rgb(255, 255, 255),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                tracerNeutral = color
+            }
+        })
+    end
+})
 
-themeSection:colorpicker({
-    name = "Accent Color",
-    flag = "demo_accent",
+neutralColorsSection:colorpicker({
+    name = "Cham Color",
+    flag = "esp_cham_neutral_color",
+    color = rgb(255, 255, 255),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                chamNeutral = color
+            }
+        })
+    end
+})
+
+local teamColorsSection = colorsColumn:section({name = "Team Colors", size = 0.5, default = true, icon = "rbxassetid://6031763426"})
+
+teamColorsSection:colorpicker({
+    name = "Enemy Color",
+    flag = "esp_enemy_color",
+    color = rgb(255, 0, 0),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                boxEnemy = color,
+                boxOutlineEnemy = color,
+                tracerEnemy = color,
+                chamEnemy = color
+            }
+        })
+    end
+})
+
+teamColorsSection:colorpicker({
+    name = "Team Color",
+    flag = "esp_team_color",
+    color = rgb(0, 255, 0),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                boxTeam = color,
+                boxOutlineTeam = color,
+                tracerTeam = color,
+                chamTeam = color
+            }
+        })
+    end
+})
+
+teamColorsSection:colorpicker({
+    name = "Self Color",
+    flag = "esp_self_color",
+    color = rgb(255, 255, 0),
+    callback = function(color)
+        Twilight:SetOptions({
+            currentColors = {
+                boxSelf = color,
+                boxOutlineSelf = color,
+                tracerSelf = color,
+                chamSelf = color
+            }
+        })
+    end
+})
+
+-- ========================================
+-- SETTINGS TAB
+-- ========================================
+local settingsColumn = settingsPage:column({})
+local generalSection = settingsColumn:section({name = "General Settings", size = 0.5, default = true, icon = "rbxassetid://6031280882"})
+
+generalSection:toggle({
+    name = "Use Team Colors",
+    seperator = true,
+    flag = "esp_use_team_colors",
+    default = false,
+    info = "Override custom colors with actual team colors",
+    callback = function(enabled)
+        Twilight.settings.useTeamColor = enabled
+    end
+})
+
+generalSection:slider({
+    name = "Max Distance",
+    min = 100,
+    max = 5000,
+    default = 2500,
+    suffix = " studs",
+    seperator = true,
+    flag = "esp_max_distance",
+    info = "Maximum distance to show ESP (0 = unlimited)",
+    callback = function(value)
+        Twilight.settings.limitDistance = value > 100 and value or nil
+    end
+})
+
+local controlSection = settingsColumn:section({name = "ESP Controls", size = 0.5, default = true, icon = "rbxassetid://6031763426"})
+
+controlSection:button({
+    name = "Enable Player ESP",
+    callback = function()
+        Twilight:EnablePlayerESP()
+        notifications:create_notification({
+            name = "ESP Enabled",
+            info = "Player ESP has been activated!",
+            lifetime = 2
+        })
+    end
+})
+
+controlSection:button({
+    name = "Reload ESP",
+    callback = function()
+        Twilight.Unload(false)
+        task.wait(0.1)
+        Twilight.Load()
+        Twilight:EnablePlayerESP()
+        notifications:create_notification({
+            name = "ESP Reloaded",
+            info = "ESP has been reloaded successfully!",
+            lifetime = 2
+        })
+    end
+})
+
+controlSection:button({
+    name = "Unload ESP",
+    callback = function()
+        Twilight.Unload(true)
+        notifications:create_notification({
+            name = "ESP Unloaded",
+            info = "ESP has been completely removed!",
+            lifetime = 2
+        })
+    end
+})
+
+controlSection:keybind({
+    name = "Toggle ESP GUI",
+    flag = "esp_toggle_gui",
+    default = true,
+    callback = function(is_open)
+        window.toggle_menu(is_open)
+    end
+})
+
+local menuSection = settingsColumn:section({name = "Menu Customization", size = 0.5, default = true, icon = "rbxassetid://6031280882"})
+
+menuSection:colorpicker({
+    name = "Menu Accent",
+    flag = "menu_accent_color",
     color = defaultAccent,
     callback = function(color)
         MultyLibrary:update_theme("accent", color)
     end
 })
 
-themeSection:label({
-    name = "Presets",
-    info = "Apply a quick accent preset or fine-tune the color manually."
+-- ========================================
+-- INITIALIZATION
+-- ========================================
+
+-- Initialize ESP with default settings
+Twilight:SetOptions({
+    currentColors = {
+        boxNeutral = rgb(255, 255, 255),
+        boxOutlineNeutral = rgb(255, 255, 255),
+        tracerNeutral = rgb(255, 255, 255),
+        chamNeutral = rgb(255, 255, 255),
+        boxEnemy = rgb(255, 0, 0),
+        boxOutlineEnemy = rgb(255, 0, 0),
+        tracerEnemy = rgb(255, 0, 0),
+        chamEnemy = rgb(255, 0, 0),
+        boxTeam = rgb(0, 255, 0),
+        boxOutlineTeam = rgb(0, 255, 0),
+        tracerTeam = rgb(0, 255, 0),
+        chamTeam = rgb(0, 255, 0),
+        boxSelf = rgb(255, 255, 0),
+        boxOutlineSelf = rgb(255, 255, 0),
+        tracerSelf = rgb(255, 255, 0),
+        chamSelf = rgb(255, 255, 0)
+    },
+    boxEnabled = true,
+    boxTeamCheck = false,
+    outlineBoxEnabled = true,
+    outlineBoxTeamCheck = false,
+    tracersEnabled = false,
+    healthBarEnabled = true,
+    healthBarTeamCheck = false,
+    chamsEnabled = false,
+    chamsTeamCheck = false,
+    useTeamColor = false,
+    limitDistance = 2500,
+    lowHealthAlert = true,
+    showObjectNames = true
 })
 
-themeSection:list({
-    options = {"Default", "Sunset", "Frost", "Midnight"},
-    flag = "demo_accent_preset",
-    callback = function(option)
-        local palette = {
-            Default = defaultAccent,
-            Sunset = rgb(255, 158, 113),
-            Frost = rgb(141, 198, 255),
-            Midnight = rgb(64, 78, 122)
-        }
+-- Enable Player ESP
+Twilight:EnablePlayerESP()
 
-        local selected = palette[option] or themes.preset.accent
-        MultyLibrary:update_theme("accent", selected)
-    end
+-- Show welcome notification
+notifications:create_notification({
+    name = "Multy ESP Suite",
+    info = "ESP loaded successfully! Powered by Twilight ESP Library.",
+    lifetime = 4
 })
 
--- Advanced
-local advancedColumn = advancedPage:column({})
-local performanceSection = advancedColumn:section({name = "Performance Settings", size = 1, default = true})
-
-performanceSection:label({
-    name = "System Optimization",
-    info = "Configure advanced performance settings for optimal gameplay."
-})
-
-performanceSection:toggle({
-    name = "Enable FPS Boost",
-    seperator = true,
-    flag = "advanced_fps_boost",
-    callback = function(enabled)
-        print("[Advanced] FPS Boost:", enabled)
-    end
-})
-
-performanceSection:toggle({
-    name = "Reduce Lag",
-    seperator = true,
-    flag = "advanced_reduce_lag",
-    callback = function(enabled)
-        print("[Advanced] Reduce Lag:", enabled)
-    end
-})
-
-performanceSection:slider({
-    name = "Render Distance",
-    min = 100,
-    max = 1000,
-    default = 500,
-    suffix = " studs",
-    seperator = true,
-    flag = "advanced_render_distance",
-    callback = function(value)
-        print("[Advanced] Render Distance:", value)
-    end
-})
-
-performanceSection:dropdown({
-    name = "Quality Preset",
-    items = {"Low", "Medium", "High", "Ultra"},
-    default = "Medium",
-    seperator = true,
-    flag = "advanced_quality_preset",
-    callback = function(selection)
-        print("[Advanced] Quality Preset:", selection)
-    end
-})
-
+-- Initialize config system
 MultyLibrary:init_config(window)
