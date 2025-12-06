@@ -3746,16 +3746,37 @@ getgenv().MultyLibraryLoaded = true
 getgenv().NoAnticheatPresent = true -- Set to true if no anticheat (enables chams)
 getgenv().InterfaceName = "Multy ESP Suite"
 
+-- Load Twilight ESP library (fully client-sided via HTTP)
+print("Loading Twilight ESP library...")
 local success, Twilight = pcall(function()
     return loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/twilight"))()
 end)
 
-if not success or not Twilight then
-    warn("Failed to load Twilight ESP library. Error:", Twilight)
+if not success then
+    warn("Failed to load Twilight ESP library from primary source.")
+    warn("Error:", Twilight)
+    warn("Attempting alternative source...")
+    
+    -- Try loading from your GitHub repository
+    success, Twilight = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/bloker0000/MultyUI/refs/heads/main/packages/_index/Twilight/example.luau"))()
+    end)
+    
+    if not success then
+        warn("Failed to load from alternative source. Error:", Twilight)
+        warn("ESP functionality will not be available.")
+        return
+    end
+end
+
+if not Twilight then
+    warn("Twilight library returned nil - this means the library failed to initialize")
     return
 end
 
+print("✓ Twilight ESP library loaded successfully!")
 Twilight.Load()
+print("✓ Twilight.Load() called")
 
 -- Default accent color
 local defaultAccent = themes.preset.accent
@@ -4147,7 +4168,9 @@ Twilight:SetOptions({
 })
 
 -- Enable Player ESP
+print("Enabling Player ESP...")
 Twilight:EnablePlayerESP()
+print("Player ESP enabled!")
 
 -- Show welcome notification
 notifications:create_notification({
@@ -4155,6 +4178,11 @@ notifications:create_notification({
     info = "ESP loaded successfully! Powered by Twilight ESP Library.",
     lifetime = 4
 })
+
+print("GUI should now be visible!")
+print("Twilight Instance:", Twilight.Instance)
+print("Twilight Instance Enabled:", Twilight.Instance.Enabled)
+print("MultyLibrary items Enabled:", MultyLibrary["items"].Enabled)
 
 -- Initialize config system
 MultyLibrary:init_config(window)
