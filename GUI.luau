@@ -773,8 +773,10 @@ getgenv().MultyLibraryLoaded = true
                     BackgroundColor3 = rgb(255, 255, 255);
                     AutomaticCanvasSize = Enum.AutomaticSize.Y;
                     CanvasSize = dim2(0, 0, 0, 0);
-                    ScrollBarThickness = 3;
-                    ScrollBarImageColor3 = rgb(70, 70, 72);
+                        ScrollBarThickness = 6;
+                        ScrollBarImageColor3 = themes.preset.accent;
+                        ScrollBarImageTransparency = 0;
+                        VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar;
                     ScrollingDirection = Enum.ScrollingDirection.Y;
                     Active = true;
                     ClipsDescendants = true;
@@ -959,7 +961,7 @@ getgenv().MultyLibraryLoaded = true
                                     AutomaticSize = Enum.AutomaticSize.Y
                                 });
                                 
-                                MultyLibrary:create( "UIListLayout" , {
+                                multi_items[ "layout" ] = MultyLibrary:create( "UIListLayout" , {
                                     FillDirection = Enum.FillDirection.Vertical;
                                     HorizontalFlex = Enum.UIFlexAlignment.Fill;
                                     Parent = multi_items[ "tab" ];
@@ -983,6 +985,26 @@ getgenv().MultyLibraryLoaded = true
                         data.button = multi_items[ "button" ]
                         data.page = multi_items[ "tab" ]
                         data.parent = setmetatable(data, MultyLibrary):sub_tab({}).items[ "tab_parent" ]
+                        data.layout = multi_items[ "layout" ]
+
+                        function data:update_tab_scroll()
+                            if not items[ "tab_holder" ] then
+                                return
+                            end
+                            local layout = self.layout
+                            if layout then
+                                local sizeY = layout.AbsoluteContentSize.Y + 20
+                                items[ "tab_holder" ].CanvasSize = dim2(0, 0, 0, sizeY)
+                            end
+                        end
+                        
+                        if data.layout then
+                            data.layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                                if cfg.current_multi == data then
+                                    data:update_tab_scroll()
+                                end
+                            end)
+                        end
                         
                         -- Old column code
                         -- data.left = multi_items[ "left" ]
@@ -1015,6 +1037,8 @@ getgenv().MultyLibraryLoaded = true
                             cfg.current_multi = data
 
                             MultyLibrary:close_element()
+
+                            data:update_tab_scroll()
 						end
 
 						multi_items[ "button" ].MouseButton1Down:Connect(function()
@@ -1116,6 +1140,7 @@ getgenv().MultyLibraryLoaded = true
         -- Miscellaneous 
             function MultyLibrary:column(properties) 
                 local cfg = {items = {}, size = properties.size or 1}
+                cfg.parent_tab = self
 
                 local items = cfg.items; do     
                     items[ "column" ] = MultyLibrary:create( "Frame" , {
@@ -1183,6 +1208,7 @@ getgenv().MultyLibraryLoaded = true
                 icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6022668898";
                 fading_toggle = properties.fading or properties.Fading or false;
                 items = {};
+                parent_tab = self.parent_tab or self;
             };
             
             local items = cfg.items; do 
@@ -1400,6 +1426,19 @@ getgenv().MultyLibraryLoaded = true
                         CornerRadius = dim(0, 7)
                     });
                 end 
+
+                function cfg:update_scroll_state()
+                    local layout = items[ "elements" ]:FindFirstChildOfClass("UIListLayout")
+                    if layout and items[ "scrolling" ] then
+                        local contentY = layout.AbsoluteContentSize.Y + 20
+                        items[ "scrolling" ].CanvasSize = dim2(0, 0, 0, contentY)
+                    end
+                    if self.parent_tab and self.parent_tab.update_tab_scroll then
+                        self.parent_tab:update_tab_scroll()
+                    end
+                end
+
+                cfg:update_scroll_state()
             end;
 
             if cfg.fading_toggle then
@@ -1925,48 +1964,72 @@ getgenv().MultyLibraryLoaded = true
                 options = options.items or {""};
                 callback = options.callback or function() end;
                 multi = options.multi or false;
-                scrolling = options.scrolling or false;
-
                 width = options.width or 130;
-
-                -- Ignore these 
+                max_height = options.maxHeight or 200;
+                colors = options.colors or {};
+                color_fn = options.colorFn;
+                show_actions = options.showActions;
                 open = false;
                 option_instances = {};
                 multi_items = {};
                 ignore = options.ignore or false;
                 items = {};
-                y_size;
+                y_size = 0;
                 seperator = options.seperator or options.Seperator or true;
-            }   
+                actions_frame = nil;
+            }
 
-            cfg.default = options.default or (cfg.multi and {cfg.items[1]}) or cfg.items[1] or "None"
+            if cfg.multi and (options.default == "All" or options.default == "all") then
+                cfg.default = cfg.options
+            else
+                cfg.default = options.default or (cfg.multi and {cfg.options[1]}) or cfg.options[1] or "None"
+            end
+
             flags[cfg.flag] = cfg.default
 
             local items = cfg.items; do 
-                -- Element
-                    items[ "dropdown_object" ] = MultyLibrary:create( "TextButton" , {
+                items[ "dropdown_object" ] = MultyLibrary:create( "TextButton" , {
+                    FontFace = fonts.small;
+                    TextColor3 = rgb(0, 0, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = "";
+                    Parent = self.items[ "elements" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    Size = dim2(1, 0, 0, 0);
+                    BorderSizePixel = 0;
+                    AutomaticSize = Enum.AutomaticSize.Y;
+                    TextSize = 14;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                items[ "name" ] = MultyLibrary:create( "TextLabel" , {
+                    FontFace = fonts.small;
+                    TextColor3 = rgb(245, 245, 245);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = cfg.name;
+                    Parent = items[ "dropdown_object" ];
+                    Name = "\0";
+                    Size = dim2(1, 0, 0, 0);
+                    BackgroundTransparency = 1;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    BorderSizePixel = 0;
+                    AutomaticSize = Enum.AutomaticSize.XY;
+                    TextSize = 16;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                if cfg.info then 
+                    items[ "info" ] = MultyLibrary:create( "TextLabel" , {
                         FontFace = fonts.small;
-                        TextColor3 = rgb(0, 0, 0);
+                        TextColor3 = rgb(130, 130, 130);
                         BorderColor3 = rgb(0, 0, 0);
-                        Text = "";
-                        Parent = self.items[ "elements" ];
-                        Name = "\0";
-                        BackgroundTransparency = 1;
-                        Size = dim2(1, 0, 0, 0);
-                        BorderSizePixel = 0;
-                        AutomaticSize = Enum.AutomaticSize.Y;
-                        TextSize = 14;
-                        BackgroundColor3 = rgb(255, 255, 255)
-                    });
-                    
-                    items[ "name" ] = MultyLibrary:create( "TextLabel" , {
-                        FontFace = fonts.small;
-                        TextColor3 = rgb(245, 245, 245);
-                        BorderColor3 = rgb(0, 0, 0);
-                        Text = "Dropdown";
+                        TextWrapped = true;
+                        Text = cfg.info;
                         Parent = items[ "dropdown_object" ];
                         Name = "\0";
-                        Size = dim2(1, 0, 0, 0);
+                        Position = dim2(0, 5, 0, 17);
+                        Size = dim2(1, -10, 0, 0);
                         BackgroundTransparency = 1;
                         TextXAlignment = Enum.TextXAlignment.Left;
                         BorderSizePixel = 0;
@@ -1974,153 +2037,159 @@ getgenv().MultyLibraryLoaded = true
                         TextSize = 16;
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
-                    
-                    if cfg.info then 
-                        items[ "info" ] = MultyLibrary:create( "TextLabel" , {
-                            FontFace = fonts.small;
-                            TextColor3 = rgb(130, 130, 130);
-                            BorderColor3 = rgb(0, 0, 0);
-                            TextWrapped = true;
-                            Text = cfg.info;
-                            Parent = items[ "dropdown_object" ];
-                            Name = "\0";
-                            Position = dim2(0, 5, 0, 17);
-                            Size = dim2(1, -10, 0, 0);
-                            BackgroundTransparency = 1;
-                            TextXAlignment = Enum.TextXAlignment.Left;
-                            BorderSizePixel = 0;
-                            AutomaticSize = Enum.AutomaticSize.XY;
-                            TextSize = 16;
-                            BackgroundColor3 = rgb(255, 255, 255)
-                        });
-                    end 
+                end 
 
-                    MultyLibrary:create( "UIPadding" , {
-                        Parent = items[ "name" ];
-                        PaddingRight = dim(0, 5);
-                        PaddingLeft = dim(0, 5)
-                    });
-                    
-                    items[ "right_components" ] = MultyLibrary:create( "Frame" , {
-                        Parent = items[ "dropdown_object" ];
-                        Name = "\0";
-                        Position = dim2(1, 0, 0, 0);
-                        BorderColor3 = rgb(0, 0, 0);
-                        Size = dim2(0, 0, 1, 0);
-                        BorderSizePixel = 0;
-                        BackgroundColor3 = rgb(255, 255, 255)
-                    });
-                    
-                    MultyLibrary:create( "UIListLayout" , {
-                        FillDirection = Enum.FillDirection.Horizontal;
-                        HorizontalAlignment = Enum.HorizontalAlignment.Right;
-                        Parent = items[ "right_components" ];
-                        Padding = dim(0, 7);
-                        SortOrder = Enum.SortOrder.LayoutOrder
-                    });
-                    
-                    items[ "dropdown" ] = MultyLibrary:create( "TextButton" , {
-                        FontFace = fonts.small;
-                        TextColor3 = rgb(0, 0, 0);
-                        BorderColor3 = rgb(0, 0, 0);
-                        Text = "";
-                        AutoButtonColor = false;
-                        AnchorPoint = vec2(1, 0);
-                        Parent = items[ "right_components" ];
-                        Name = "\0";
-                        Position = dim2(1, 0, 0, 0);
-                        Size = dim2(0, cfg.width, 0, 16);
-                        BorderSizePixel = 0;
-                        TextSize = 14;
-                        BackgroundColor3 = rgb(33, 33, 35)
-                    });
-                    
-                    MultyLibrary:create( "UICorner" , {
-                        Parent = items[ "dropdown" ];
-                        CornerRadius = dim(0, 4)
-                    });
-                    
-                    items[ "sub_text" ] = MultyLibrary:create( "TextLabel" , {
-                        FontFace = fonts.small;
-                        TextColor3 = rgb(86, 86, 87);
-                        BorderColor3 = rgb(0, 0, 0);
-                        Text = "awdawdawdawdawdawdawdaw";
-                        Parent = items[ "dropdown" ];
-                        Name = "\0";
-                        Size = dim2(1, -12, 0, 0);
-                        BorderSizePixel = 0;
-                        BackgroundTransparency = 1;
-                        TextXAlignment = Enum.TextXAlignment.Left;
-                        TextTruncate = Enum.TextTruncate.AtEnd;
-                        AutomaticSize = Enum.AutomaticSize.Y;
-                        TextSize = 14;
-                        BackgroundColor3 = rgb(255, 255, 255)
-                    });
-                    
-                    MultyLibrary:create( "UIPadding" , {
-                        Parent = items[ "sub_text" ];
-                        PaddingTop = dim(0, 1);
-                        PaddingRight = dim(0, 5);
-                        PaddingLeft = dim(0, 5)
-                    });
-                    
-                    items[ "indicator" ] = MultyLibrary:create( "ImageLabel" , {
-                        ImageColor3 = rgb(86, 86, 87);
-                        BorderColor3 = rgb(0, 0, 0);
-                        Parent = items[ "dropdown" ];
-                        AnchorPoint = vec2(1, 0.5);
-                        Image = "rbxassetid://101025591575185";
-                        BackgroundTransparency = 1;
-                        Position = dim2(1, -5, 0.5, 0);
-                        Name = "\0";
-                        Size = dim2(0, 12, 0, 12);
-                        BorderSizePixel = 0;
-                        BackgroundColor3 = rgb(255, 255, 255)
-                    });
-                -- 
+                MultyLibrary:create( "UIPadding" , {
+                    Parent = items[ "name" ];
+                    PaddingRight = dim(0, 5);
+                    PaddingLeft = dim(0, 5)
+                });
+                
+                items[ "right_components" ] = MultyLibrary:create( "Frame" , {
+                    Parent = items[ "dropdown_object" ];
+                    Name = "\0";
+                    Position = dim2(1, 0, 0, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Size = dim2(0, 0, 1, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                MultyLibrary:create( "UIListLayout" , {
+                    FillDirection = Enum.FillDirection.Horizontal;
+                    HorizontalAlignment = Enum.HorizontalAlignment.Right;
+                    Parent = items[ "right_components" ];
+                    Padding = dim(0, 7);
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                });
+                
+                items[ "dropdown" ] = MultyLibrary:create( "TextButton" , {
+                    FontFace = fonts.small;
+                    TextColor3 = rgb(0, 0, 0);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = "";
+                    AutoButtonColor = false;
+                    AnchorPoint = vec2(1, 0);
+                    Parent = items[ "right_components" ];
+                    Name = "\0";
+                    Position = dim2(1, 0, 0, 0);
+                    Size = dim2(0, cfg.width, 0, 16);
+                    BorderSizePixel = 0;
+                    TextSize = 14;
+                    BackgroundColor3 = rgb(33, 33, 35)
+                });
+                
+                MultyLibrary:create( "UICorner" , {
+                    Parent = items[ "dropdown" ];
+                    CornerRadius = dim(0, 4)
+                });
+                
+                items[ "sub_text" ] = MultyLibrary:create( "TextLabel" , {
+                    FontFace = fonts.small;
+                    TextColor3 = rgb(86, 86, 87);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Text = "";
+                    Parent = items[ "dropdown" ];
+                    Name = "\0";
+                    Size = dim2(1, -12, 0, 0);
+                    BorderSizePixel = 0;
+                    BackgroundTransparency = 1;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    TextTruncate = Enum.TextTruncate.AtEnd;
+                    AutomaticSize = Enum.AutomaticSize.Y;
+                    TextSize = 14;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
+                
+                MultyLibrary:create( "UIPadding" , {
+                    Parent = items[ "sub_text" ];
+                    PaddingTop = dim(0, 1);
+                    PaddingRight = dim(0, 5);
+                    PaddingLeft = dim(0, 5)
+                });
+                
+                items[ "indicator" ] = MultyLibrary:create( "ImageLabel" , {
+                    ImageColor3 = rgb(86, 86, 87);
+                    BorderColor3 = rgb(0, 0, 0);
+                    Parent = items[ "dropdown" ];
+                    AnchorPoint = vec2(1, 0.5);
+                    Image = "rbxassetid://101025591575185";
+                    BackgroundTransparency = 1;
+                    Position = dim2(1, -5, 0.5, 0);
+                    Name = "\0";
+                    Size = dim2(0, 12, 0, 12);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(255, 255, 255)
+                });
 
-                -- Element Holder
-                    items[ "dropdown_holder" ] = MultyLibrary:create( "Frame" , {
-                        BorderColor3 = rgb(0, 0, 0);
-                        Parent = MultyLibrary[ "items" ];
-                        Name = "\0";
-                        Visible = true;
-                        BackgroundTransparency = 1;
-                        Size = dim2(0, 0, 0, 0);
-                        BorderSizePixel = 0;
-                        BackgroundColor3 = rgb(0, 0, 0);
-                        ZIndex = 10;
-                    });
-                    
-                    items[ "outline" ] = MultyLibrary:create( "Frame" , {
-                        Parent = items[ "dropdown_holder" ];
-                        Size = dim2(1, 0, 1, 0);
-                        ClipsDescendants = true;
-                        BorderColor3 = rgb(0, 0, 0);
-                        BorderSizePixel = 0;
-                        BackgroundColor3 = rgb(33, 33, 35);
-                        ZIndex = 10;
-                    });
-                    
-                    MultyLibrary:create( "UIPadding" , {
-                        PaddingBottom = dim(0, 6);
-                        PaddingTop = dim(0, 3);
-                        PaddingLeft = dim(0, 3);
-                        Parent = items[ "outline" ]
-                    });
-                    
-                    MultyLibrary:create( "UIListLayout" , {
-                        Parent = items[ "outline" ];
-                        Padding = dim(0, 5);
-                        SortOrder = Enum.SortOrder.LayoutOrder
-                    });
-                    
-                    MultyLibrary:create( "UICorner" , {
-                        Parent = items[ "outline" ];
-                        CornerRadius = dim(0, 4)
-                    });
-                -- 
+                items[ "dropdown_holder" ] = MultyLibrary:create( "Frame" , {
+                    BorderColor3 = rgb(0, 0, 0);
+                    Parent = MultyLibrary[ "items" ];
+                    Name = "\0";
+                    Visible = false;
+                    BackgroundTransparency = 1;
+                    Size = dim2(0, 0, 0, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(0, 0, 0);
+                    ZIndex = 10;
+                });
+                
+                items[ "outline" ] = MultyLibrary:create( "ScrollingFrame" , {
+                    Parent = items[ "dropdown_holder" ];
+                    Size = dim2(1, 0, 1, 0);
+                    ClipsDescendants = true;
+                    BorderColor3 = rgb(0, 0, 0);
+                    BorderSizePixel = 0;
+                    BackgroundColor3 = rgb(33, 33, 35);
+                    ZIndex = 10;
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                    CanvasSize = dim2(0, 0, 0, 0);
+                    ScrollBarThickness = 6;
+                    ScrollBarImageColor3 = themes.preset.accent;
+                    ScrollingDirection = Enum.ScrollingDirection.Y;
+                    Active = true;
+                });
+                
+                MultyLibrary:create( "UIPadding" , {
+                    PaddingBottom = dim(0, 6);
+                    PaddingTop = dim(0, 3);
+                    PaddingLeft = dim(0, 3);
+                    Parent = items[ "outline" ]
+                });
+                
+                items[ "list_layout" ] = MultyLibrary:create( "UIListLayout" , {
+                    Parent = items[ "outline" ];
+                    Padding = dim(0, 5);
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                });
+                
+                MultyLibrary:create( "UICorner" , {
+                    Parent = items[ "outline" ];
+                    CornerRadius = dim(0, 4)
+                });
             end 
+
+            local function resolve_color(text)
+                if cfg.color_fn then
+                    local ok, value = pcall(cfg.color_fn, text)
+                    if ok and typeof(value) == "Color3" then
+                        return value
+                    end
+                end
+                if typeof(cfg.colors) == "table" and typeof(cfg.colors[text]) == "Color3" then
+                    return cfg.colors[text]
+                end
+                return nil
+            end
+
+            local function apply_height()
+                local layout = items[ "list_layout" ]
+                local content = layout and layout.AbsoluteContentSize.Y or 0
+                local target = math.min(cfg.max_height, content + 12)
+                cfg.y_size = target
+                items[ "outline" ].CanvasSize = dim2(0, 0, 0, content)
+                MultyLibrary:tween(items[ "dropdown_holder" ], {Size = dim_offset(items[ "dropdown" ].AbsoluteSize.X, target)})
+            end
 
             function cfg.render_option(text)
                 local button = MultyLibrary:create( "TextButton" , {
@@ -2138,23 +2207,41 @@ getgenv().MultyLibraryLoaded = true
                     TextSize = 14;
                     BackgroundColor3 = rgb(255, 255, 255);
                     ZIndex = 10;
-                }); MultyLibrary:apply_theme(button, "accent", "TextColor3");
+                });
+
+                local dot = MultyLibrary:create( "Frame" , {
+                    Parent = button;
+                    Size = dim2(0, 6, 0, 6);
+                    Position = dim2(0, 2, 0.5, -3);
+                    BackgroundColor3 = resolve_color(text) or rgb(86, 86, 87);
+                    BorderSizePixel = 0;
+                    BorderColor3 = rgb(0, 0, 0);
+                    ZIndex = 11;
+                })
+
+                MultyLibrary:create( "UICorner" , {
+                    Parent = dot;
+                    CornerRadius = dim(0, 999)
+                })
                 
                 MultyLibrary:create( "UIPadding" , {
                     Parent = button;
                     PaddingTop = dim(0, 1);
                     PaddingRight = dim(0, 5);
-                    PaddingLeft = dim(0, 5)
+                    PaddingLeft = dim(0, 14)
                 });
                 
-                return button
+                return button, dot
             end
             
             function cfg.set_visible(bool)
-                local a = bool and cfg.y_size or 0
-                MultyLibrary:tween(items[ "dropdown_holder" ], {Size = dim_offset(items[ "dropdown" ].AbsoluteSize.X, a)})
-
-                items[ "dropdown_holder" ].Position = dim2(0, items[ "dropdown" ].AbsolutePosition.X, 0, items[ "dropdown" ].AbsolutePosition.Y + 80)
+                items[ "dropdown_holder" ].Visible = bool
+                if not bool then
+                    MultyLibrary:tween(items[ "dropdown_holder" ], {Size = dim_offset(0, 0)})
+                    return
+                end
+                apply_height()
+                items[ "dropdown_holder" ].Position = dim2(0, items[ "dropdown" ].AbsolutePosition.X, 0, items[ "dropdown" ].AbsolutePosition.Y + items[ "dropdown" ].AbsoluteSize.Y + 6)
                 if not (self.sanity and MultyLibrary.current_open == self) then 
                     MultyLibrary:close_element(cfg)
                 end
@@ -2165,12 +2252,14 @@ getgenv().MultyLibraryLoaded = true
                 local isTable = type(value) == "table"
 
                 for _, option in cfg.option_instances do 
-                    if option.Text == value or (isTable and find(value, option.Text)) then 
-                        insert(selected, option.Text)
+                    local match = option.button.Text == value or (isTable and find(value, option.button.Text))
+                    local optionColor = option.color
+                    if match then
+                        insert(selected, option.button.Text)
                         cfg.multi_items = selected
-                        option.TextColor3 = themes.preset.accent
+                        option.button.TextColor3 = optionColor or themes.preset.accent
                     else
-                        option.TextColor3 = rgb(72, 72, 73)
+                        option.button.TextColor3 = rgb(72, 72, 73)
                     end
                 end
 
@@ -2180,39 +2269,129 @@ getgenv().MultyLibraryLoaded = true
                 cfg.callback(flags[cfg.flag]) 
             end
             
-            function cfg.refresh_options(list) 
-                cfg.y_size = 0
+            local function add_option_button(option)
+                local button, dot = cfg.render_option(option)
+                insert(cfg.option_instances, {button = button, dot = dot, color = resolve_color(option)})
+                button.MouseButton1Down:Connect(function()
+                    if cfg.multi then 
+                        local selected_index = find(cfg.multi_items, button.Text)
+                        
+                        if selected_index then 
+                            remove(cfg.multi_items, selected_index)
+                        else
+                            insert(cfg.multi_items, button.Text)
+                        end
+                        
+                        cfg.set(cfg.multi_items) 				
+                    else 
+                        cfg.set_visible(false)
+                        cfg.open = false 
+                        
+                        cfg.set(button.Text)
+                    end
+                end)
+            end
 
-                for _, option in cfg.option_instances do 
-                    option:Destroy() 
+            local function add_actions()
+                if not cfg.multi or cfg.show_actions == false then
+                    return
                 end
-                
+
+                if cfg.actions_frame then
+                    cfg.actions_frame:Destroy()
+                end
+
+                local actions = MultyLibrary:create( "Frame" , {
+                    Parent = items[ "outline" ];
+                    BackgroundTransparency = 1;
+                    Size = dim2(1, -12, 0, 20);
+                    BorderSizePixel = 0;
+                    Name = "\0";
+                    ZIndex = 10;
+                })
+
+                cfg.actions_frame = actions
+
+                MultyLibrary:create( "UIListLayout" , {
+                    Parent = actions;
+                    FillDirection = Enum.FillDirection.Horizontal;
+                    HorizontalAlignment = Enum.HorizontalAlignment.Left;
+                    Padding = dim(0, 6);
+                    SortOrder = Enum.SortOrder.LayoutOrder;
+                })
+
+                local select_all = MultyLibrary:create( "TextButton" , {
+                    Parent = actions;
+                    BackgroundColor3 = rgb(40, 40, 42);
+                    Size = dim2(0, 70, 0, 20);
+                    BorderSizePixel = 0;
+                    TextColor3 = rgb(230, 230, 230);
+                    TextSize = 13;
+                    Text = "Select All";
+                    AutoButtonColor = false;
+                    ZIndex = 10;
+                    FontFace = fonts.small;
+                })
+
+                MultyLibrary:create( "UICorner" , {
+                    Parent = select_all;
+                    CornerRadius = dim(0, 3)
+                })
+
+                local clear_all = MultyLibrary:create( "TextButton" , {
+                    Parent = actions;
+                    BackgroundColor3 = rgb(40, 40, 42);
+                    Size = dim2(0, 70, 0, 20);
+                    BorderSizePixel = 0;
+                    TextColor3 = rgb(230, 230, 230);
+                    TextSize = 13;
+                    Text = "Clear";
+                    AutoButtonColor = false;
+                    ZIndex = 10;
+                    FontFace = fonts.small;
+                })
+
+                MultyLibrary:create( "UICorner" , {
+                    Parent = clear_all;
+                    CornerRadius = dim(0, 3)
+                })
+
+                select_all.MouseButton1Click:Connect(function()
+                    cfg.multi_items = {}
+                    for _, option in cfg.options do
+                        insert(cfg.multi_items, option)
+                    end
+                    cfg.set(cfg.multi_items)
+                end)
+
+                clear_all.MouseButton1Click:Connect(function()
+                    cfg.multi_items = {}
+                    cfg.set(cfg.multi_items)
+                end)
+            end
+            
+            function cfg.refresh_options(list) 
+                if cfg.actions_frame then
+                    cfg.actions_frame:Destroy()
+                    cfg.actions_frame = nil
+                end
+                for _, option in cfg.option_instances do 
+                    if option.button then
+                        option.button:Destroy()
+                    end
+                end
                 cfg.option_instances = {} 
+                cfg.options = list
+
+                if cfg.multi then
+                    add_actions()
+                end
 
                 for _, option in list do 
-                    local button = cfg.render_option(option)
-                    cfg.y_size = cfg.y_size + button.AbsoluteSize.Y + 6 -- super annoying manual sizing but oh well
-                    insert(cfg.option_instances, button)
-                    
-                    button.MouseButton1Down:Connect(function()
-                        if cfg.multi then 
-                            local selected_index = find(cfg.multi_items, button.Text)
-                            
-                            if selected_index then 
-                                remove(cfg.multi_items, selected_index)
-                            else
-                                insert(cfg.multi_items, button.Text)
-                            end
-                            
-                            cfg.set(cfg.multi_items) 				
-                        else 
-                            cfg.set_visible(false)
-                            cfg.open = false 
-                            
-                            cfg.set(button.Text)
-                        end
-                    end)
+                    add_option_button(option)
                 end
+
+                apply_height()
             end
 
             items[ "dropdown" ].MouseButton1Click:Connect(function()
@@ -3574,14 +3753,69 @@ getgenv().MultyLibraryLoaded = true
             
             local column = main:column({})
             local section = column:section({name = "Configs", size = 1, default = true, icon = "rbxassetid://139628202576511"})
-            config_holder = section:list({options = {"Report", "This", "Error", "To", "Finobe"}, callback = function(option) end, flag = "config_name_list"}); MultyLibrary:update_config_list()
+            config_holder = section:list({options = {}, callback = function(option) end, flag = "config_name_list"}); MultyLibrary:update_config_list()
             
             local column = main:column({})
             local section = column:section({name = "Settings", side = "right", size = 1, default = true, icon = "rbxassetid://129380150574313"})
             section:textbox({name = "Config name:", flag = "config_name_text"})
-            section:button({name = "Save", callback = function() writefile(MultyLibrary.directory .. "/configs/" .. flags["config_name_text"] or flags["config_name_list"] .. ".cfg", MultyLibrary:get_config()) MultyLibrary:update_config_list() notifications:create_notification({name = "Configs", info = "Saved config to:\n" .. flags["config_name_list"] or flags["config_name_text"]}) end}) 
-            section:button({name = "Load", callback = function() MultyLibrary:load_config(readfile(MultyLibrary.directory .. "/configs/" .. flags["config_name_list"] .. ".cfg"))  MultyLibrary:update_config_list() notifications:create_notification({name = "Configs", info = "Loaded config:\n" .. flags["config_name_list"]}) end})
-            section:button({name = "Delete", callback = function() delfile(MultyLibrary.directory .. "/configs/" .. flags["config_name_list"] .. ".cfg")  MultyLibrary:update_config_list() notifications:create_notification({name = "Configs", info = "Deleted config:\n" .. flags["config_name_list"]}) end})
+            local function resolve_name()
+                if flags["config_name_text"] and flags["config_name_text"] ~= "" then
+                    return flags["config_name_text"]
+                end
+                if flags["config_name_list"] and flags["config_name_list"] ~= "" then
+                    return flags["config_name_list"]
+                end
+                return nil
+            end
+
+            section:button({name = "Save", callback = function()
+                local name = resolve_name()
+                if not name then
+                    notifications:create_notification({name = "Configs", info = "Enter a config name first."})
+                    return
+                end
+                local path = MultyLibrary.directory .. "/configs/" .. name .. ".cfg"
+                local ok, err = pcall(function()
+                    writefile(path, MultyLibrary:get_config())
+                end)
+                MultyLibrary:update_config_list()
+                notifications:create_notification({name = "Configs", info = ok and ("Saved config:\n" .. name) or ("Save failed:\n" .. tostring(err))})
+            end}) 
+
+            section:button({name = "Load", callback = function()
+                local name = resolve_name()
+                if not name then
+                    notifications:create_notification({name = "Configs", info = "Select a config to load."})
+                    return
+                end
+                local path = MultyLibrary.directory .. "/configs/" .. name .. ".cfg"
+                local ok, res = pcall(function()
+                    return readfile(path)
+                end)
+                if ok and res then
+                    MultyLibrary:load_config(res)
+                    notifications:create_notification({name = "Configs", info = "Loaded config:\n" .. name})
+                else
+                    notifications:create_notification({name = "Configs", info = "Load failed:\n" .. tostring(res)})
+                end
+                MultyLibrary:update_config_list()
+            end})
+
+            section:button({name = "Delete", callback = function()
+                local name = resolve_name()
+                if not name then
+                    notifications:create_notification({name = "Configs", info = "Select a config to delete."})
+                    return
+                end
+                local path = MultyLibrary.directory .. "/configs/" .. name .. ".cfg"
+                local ok, err = pcall(function()
+                    if isfile(path) then
+                        delfile(path)
+                    end
+                end)
+                MultyLibrary:update_config_list()
+                notifications:create_notification({name = "Configs", info = ok and ("Deleted config:\n" .. name) or ("Delete failed:\n" .. tostring(err))})
+            end})
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) MultyLibrary:update_theme("accent", color) end, color = themes.preset.accent})
             section:keybind({name = "Menu Bind", callback = function(bool) window.toggle_menu(bool) end, default = true})
         end
