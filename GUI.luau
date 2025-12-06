@@ -771,12 +771,12 @@ getgenv().MultyLibraryLoaded = true
                     Size = dim2(1, -216, 1, -101);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255);
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                    AutomaticCanvasSize = Enum.AutomaticSize.None;
                     CanvasSize = dim2(0, 0, 0, 0);
-                        ScrollBarThickness = 6;
-                        ScrollBarImageColor3 = themes.preset.accent;
-                        ScrollBarImageTransparency = 0;
-                        VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar;
+                    ScrollBarThickness = 6;
+                    ScrollBarImageColor3 = themes.preset.accent;
+                    ScrollBarImageTransparency = 0;
+                    VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar;
                     ScrollingDirection = Enum.ScrollingDirection.Y;
                     Active = true;
                     ClipsDescendants = true;
@@ -993,7 +993,7 @@ getgenv().MultyLibraryLoaded = true
                             end
                             local layout = self.layout
                             if layout then
-                                local sizeY = layout.AbsoluteContentSize.Y + 20
+                                local sizeY = layout.AbsoluteContentSize.Y + 30
                                 items[ "tab_holder" ].CanvasSize = dim2(0, 0, 0, sizeY)
                             end
                         end
@@ -2151,9 +2151,9 @@ getgenv().MultyLibraryLoaded = true
                 });
                 
                 MultyLibrary:create( "UIPadding" , {
-                    PaddingBottom = dim(0, 6);
-                    PaddingTop = dim(0, 3);
-                    PaddingLeft = dim(0, 3);
+                    PaddingBottom = dim(0, 10);
+                    PaddingTop = dim(0, 6);
+                    PaddingLeft = dim(0, 6);
                     Parent = items[ "outline" ]
                 });
                 
@@ -2212,7 +2212,7 @@ getgenv().MultyLibraryLoaded = true
                 local dot = MultyLibrary:create( "Frame" , {
                     Parent = button;
                     Size = dim2(0, 6, 0, 6);
-                    Position = dim2(0, 2, 0.5, -3);
+                    Position = dim2(0, 6, 0.5, -3);
                     BackgroundColor3 = resolve_color(text) or rgb(86, 86, 87);
                     BorderSizePixel = 0;
                     BorderColor3 = rgb(0, 0, 0);
@@ -2228,7 +2228,7 @@ getgenv().MultyLibraryLoaded = true
                     Parent = button;
                     PaddingTop = dim(0, 1);
                     PaddingRight = dim(0, 5);
-                    PaddingLeft = dim(0, 14)
+                    PaddingLeft = dim(0, 18)
                 });
                 
                 return button, dot
@@ -2240,8 +2240,11 @@ getgenv().MultyLibraryLoaded = true
                     MultyLibrary:tween(items[ "dropdown_holder" ], {Size = dim_offset(0, 0)})
                     return
                 end
-                apply_height()
-                items[ "dropdown_holder" ].Position = dim2(0, items[ "dropdown" ].AbsolutePosition.X, 0, items[ "dropdown" ].AbsolutePosition.Y + items[ "dropdown" ].AbsoluteSize.Y + 6)
+                task.defer(function()
+                    apply_height()
+                    local posY = items[ "dropdown" ].AbsolutePosition.Y + items[ "dropdown" ].AbsoluteSize.Y + 10
+                    items[ "dropdown_holder" ].Position = dim2(0, items[ "dropdown" ].AbsolutePosition.X, 0, posY)
+                end)
                 if not (self.sanity and MultyLibrary.current_open == self) then 
                     MultyLibrary:close_element(cfg)
                 end
@@ -2304,7 +2307,7 @@ getgenv().MultyLibraryLoaded = true
                 local actions = MultyLibrary:create( "Frame" , {
                     Parent = items[ "outline" ];
                     BackgroundTransparency = 1;
-                    Size = dim2(1, -12, 0, 20);
+                    Size = dim2(1, -12, 0, 26);
                     BorderSizePixel = 0;
                     Name = "\0";
                     ZIndex = 10;
