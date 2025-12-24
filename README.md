@@ -1,6 +1,6 @@
 # MultyUI
 
-A clean and modern UI library for Roblox. Makes building menus super easy.
+Modern themed GUI library.
 
 ## How to Use
 
@@ -314,8 +314,8 @@ Check out [Example.luau](Example.luau) for a complete working example.
 - Put `seperator = true` on elements to add a visual line between them
 - Use the `info` property to add descriptions that help users understand what things do
 - The `callback` function runs whenever the value changes
-- Configs save to a folder called "milenium" in your executor's workspace
+- Configs save to a folder called "multyUI" in your executor's workspace
 
 ---
 
-Made with love. Have fun building cool stuff!
+Made by Multyply

@@ -66,7 +66,7 @@ getgenv().loaded = true
 
 -- Library init
     getgenv().library = {
-        directory = "milenium",
+        directory = "multyUI",
         folders = {
             "/fonts",
             "/configs",
